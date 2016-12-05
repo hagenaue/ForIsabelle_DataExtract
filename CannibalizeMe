@@ -1,0 +1,34 @@
+#Alek's code from the initial joining and processing of the Darmanis human cortex single-cell RNAseq data:
+
+#I think this is scrap code
+#test<-read.table(file = "GSM1657871_1772078217.C03.csv")
+#rm(test)
+
+SampleInfo<-read.csv("SampleInfo_forR.csv", header=T, colClasses ="character")
+
+#Loading all of the separate files representing the RNAseq data for each cell into the R workspace and creating an object representing each of them:
+Rename<-list.files()#must remove everything except for darmanis files for the code to run this step
+for (i in 1:length(Rename)) assign(paste("",Rename[i], sep = ""), read.table(Rename[i]))
+rm(Rename)
+rm(i)
+
+library(plyr)
+ls()
+
+#I think this is scrap code
+#i=3
+
+Allobjects<-ls()
+
+#Taking all of the objects representing the RNASeq data for individual cells and combining them into a single data matrix. Note that the only reason this code works is because: 1) there were only 2 other objects in the workspace 2) the RNAseq data for each cell is in an identical format - same length, same genes, same order. Otherwise, we would have needed to use a join function instead of cbind.
+
+
+JoinedDarmanis<-cbind(GSM1657871_1772078217.C03.csv[,2],GSM1657872_1772078217.C04.csv[,2])
+colnames(JoinedDarmanis)[c(1:2)]<-c("GSM1657871_1772078217.C03.csv", "GSM1657872_1772078217.C04.csv")
+
+for(i in 3:length(Allobjects)){
+  
+JoinedDarmanis<-cbind(JoinedDarmanis, (get(Allobjects[i])[,2]))
+colnames(JoinedDarmanis)[i]<-(Allobjects)[i]
+
+}
