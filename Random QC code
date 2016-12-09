@@ -1,0 +1,89 @@
+#A whole bunch of random quality control (QC) code:
+
+####################################
+
+#Outputs a boxplot illustrating the distribution of log-transformed signal for each subject for only the filtered probes:
+png("08 Boxplot logAVGSignal Lateral Filtered.png")
+boxplot(data.frame(log.avg_signal_filtered), cex=0.25, las=3, par(cex.axis=0.75), main="Boxplot of log signal values per sample (1 box=all filtered probes)", xlab="Sample ID", ylab="Log Signal")
+dev.off()
+
+##########################
+
+#STEP 9: Quantile Normalization and visualizing sample-sample correlations. 
+# Quantile normalization is a rank-based method of normalizing the data. The reason for doing it is to reduce the overall variability in the  signal levels for each sample, which is generally assumed to be due to technical variability. What quantile normalization does is it calculates the average distribution for the signals across all of the samples (sort of like determining the average sample box plot shape), and then forces ranked data for each sample to take on that distribution.
+# The sample-sample correlations are a way of measuring how similar the overall gene expression profile is for each sample to all of the other samples in the analysis.  It is performed following quantile normalization so that the correlation values don't simply reflect the generall overall signal for each sample. These correlations can be analyzed using a heatmap, boxplots, or principal components analysis (PCA).
+ 
+#Quantile normalize the filtered log-transformed signal data:
+NormFiltered<-normalize.quantiles(log.avg_signal_filtered)
+row.names(NormFiltered)<-row.names(log.avg_signal_filtered)
+colnames(NormFiltered)<-colnames(log.avg_signal_filtered)
+
+#Output the quantile normalized data:
+write.table(NormFiltered, "Quantile Normalized filtered data.txt", sep="\t")
+
+############################
+
+
+#Output a boxplot illustrating the (now identical) signal distributions for each sample:
+png("09 Boxplot NormSignal Lateral Filtered.png")
+boxplot(data.frame(NormFiltered), cex=0.25, las=3, par(cex.axis=0.75), main="Boxplot of normalized signal values per sample (1 box= all filtered probes)", xlab="Sample ID", ylab="Quantile Normalized Signal")
+dev.off()
+
+#######################################
+
+#Visualize the sample-sample correlations using a heatmap:
+png("09 Sample Sample Correlations Heatmap.png")
+image(cor(NormFiltered), main="Visualizing the correlations between entire samples (by index#)", xlab="Red=Less correlated, Light yellow=Highly correlated")
+dev.off()
+#Note that the heatmap can be tailored to focus on a certain level of correlation by using the command zlim=c(lower limit, upper limit)
+
+#Visualize the sample-sample correlations using a boxplot:
+png("09 Boxplot Sample Sample Correlations.png")
+boxplot(data.frame(cor(NormFiltered)), cex=0.25, las=3, par(cex.axis=0.75), main="Boxplot of sample-sample correlations", xlab="Subject", ylab="Sample-Sample Correlations")
+Median10thQuantile<-median(apply((cor(NormFiltered)), 1, quantile, 0.1))
+MedianQuantile<-median(apply((cor(NormFiltered)), 1, quantile, 0.5))
+abline(a=Median10thQuantile, b=0, col=2)
+abline(a=MedianQuantile, b=0, col=3)
+mtext(paste("Median Sample-Sample Correlation=", round(MedianQuantile, digits=3), sep=" ")) 
+dev.off()
+
+#######################################
+
+#Run principal components analysis (PCA) to determine which major gradients of sample-sample correlations exist in the data (i.e. who is similar to whom):
+pcaNormFiltered<-prcomp(t(NormFiltered))
+tmp<-pcaNormFiltered$x[,1:4]
+write.table(tmp, "PCA_1_4.txt", sep="\t")
+
+PC1<-pcaNormFiltered$x[,1]
+PC2<-pcaNormFiltered$x[,2]
+
+PC3<-pcaNormFiltered$x[,3]
+PC4<-pcaNormFiltered$x[,4]
+
+#Output a scree plot for the PCA:
+png("09 PCA Scree Plot1.png")
+plot(summary(pcaNormFiltered)$importance[2,]~(c(1:42)), main="Variance Explained by Each Principal Component", xlab="PC #", ylab="Proportion of Variance Explained", col=2)
+dev.off()
+
+png("09 PCA Scree Plot2.png")
+plot(summary(pcaNormFiltered)$importance[3,]~(c(1:42)), main="Variance Explained by Each Principal Component", xlab="PC #", ylab="Cumulative Proportion of Variance Explained", col=3)
+dev.off()
+
+#Output a scatterplot illustrating the relationship between Principal components 1 & 2 (PC1 & PC2):
+png("09 PC1 vs PC2.png")
+plot(PC1~PC2, main="Principal Components Analysis of Normalized Filtered Data")
+points(PC1[Diagnosis=="CTRL"]~PC2[Diagnosis=="CTRL"], col=3)
+points(PC1[Diagnosis=="MDD"]~PC2[Diagnosis=="MDD"], col=2)
+legend(min(PC1), max(PC2)+10, c("Control", "MDD"), text.col=c(3, 2), pch=19, col=c(3, 2))
+dev.off()
+
+#Output a scatterplot illustrating the relationship between Principal components 3 & 4 (PC3 & PC4):
+png("09 PC3 vs PC4.png")
+plot(PC3~PC4, main="Principal Components Analysis of Normalized Filtered Data")
+points(PC3[Diagnosis=="CTRL"]~PC4[Diagnosis=="CTRL"], col=3)
+points(PC3[Diagnosis=="MDD"]~PC4[Diagnosis=="MDD"], col=2)
+legend(min(PC3), max(PC4)+10, c("Control", "MDD"), text.col=c(3, 2), pch=19, col=c(3, 2))
+dev.off()
+
+
+
